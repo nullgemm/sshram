@@ -13,9 +13,15 @@ void arg_unflagged(void* data, char** pars, const int pars_count)
 {
 	struct config* config = (struct config*) data;
 
-	if (pars_count != 1)
+	if (pars_count < 1)
 	{
 		config->action = SSHRAM_ACTION_EXIT;
+		return;
+	}
+
+	if (pars_count > 1)
+	{
+		dgn_throw(SSHRAM_ERR_ARG_ENCODED);
 		return;
 	}
 
@@ -35,7 +41,7 @@ void arg_unflagged(void* data, char** pars, const int pars_count)
 
 	if (config->file_encoded == NULL)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_ARG_ENCODED_OPEN);
 		return;
 	}
 }
@@ -58,6 +64,7 @@ void arg_help(void* data, char** pars, const int pars_count)
 		"    -k\n"
 		"    --keep\n"
 		"        do not remove the pipe after execution\n"
+		"        (progams using SSH will freeze until EOF is sent!)\n"
 		"\n"
 		"    -n [pipe name]\n"
 		"    --name [pipe name]\n"
@@ -73,7 +80,7 @@ void arg_encode(void* data, char** pars, const int pars_count)
 {
 	if (pars_count != 1)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_ARG_DECODED);
 		return;
 	}
 
@@ -83,7 +90,7 @@ void arg_encode(void* data, char** pars, const int pars_count)
 
 	if (config->file_decoded == NULL)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_ARG_DECODED_OPEN);
 		return;
 	}
 
@@ -101,7 +108,7 @@ void arg_name(void* data, char** pars, const int pars_count)
 {
 	if (pars_count != 1)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_ARG_NAME);
 		return;
 	}
 
@@ -122,8 +129,63 @@ void log_init(char** log)
 {
 	log[DGN_OK] =
 		"out-of-bounds log message";
-	log[SSHRAM_ERR_UNKNOWN] =
-		"unknown error";
+	log[SSHRAM_ERR_ARG_NAME] =
+		"couldn't set the pipe name (please give exactly one)";
+	log[SSHRAM_ERR_ARG_DECODED] =
+		"couldn't get a decoded file name (please give exactly one)";
+	log[SSHRAM_ERR_ARG_DECODED_OPEN] =
+		"couldn't open a decoded file";
+	log[SSHRAM_ERR_ARG_ENCODED] =
+		"couldn't get an encoded file name (please give exactly one)";
+	log[SSHRAM_ERR_ARG_ENCODED_OPEN] =
+		"couldn't open an encoded file";
+
+	log[SSHRAM_ERR_RNG] =
+		"End-Of-File was received as input";
+	log[SSHRAM_ERR_ARGON2] =
+		"couldn't hash password (Argon2 returned an error)";
+
+	log[SSHRAM_ERR_MALLOC] =
+		"couldn't allocate memmory";
+	log[SSHRAM_ERR_MLOCK] =
+		"couldn't lock memory";
+
+	log[SSHRAM_ERR_ENV] =
+		"couldn't get environment";
+	log[SSHRAM_ERR_FGETS] =
+		"couldn't get user input";
+	log[SSHRAM_ERR_FSEEK] =
+		"couldn't move file cursor";
+	log[SSHRAM_ERR_FTELL] =
+		"couldn't get file cursor position";
+	log[SSHRAM_ERR_FREAD] =
+		"couldn't read file";
+	log[SSHRAM_ERR_FWRITE] =
+		"couldn't write file";
+
+	log[SSHRAM_ERR_ENC_PASS_LEN] =
+		"password is not long enough (please use 16 bytes or more)";
+	log[SSHRAM_ERR_ENC_PASS_MATCH] =
+		"passwords did not match";
+	log[SSHRAM_ERR_ENC_PASS_MATCH] =
+		"passwords did not match";
+
+	log[SSHRAM_ERR_DEC_CHACHAPOLY] =
+		"couldn't decode file";
+	log[SSHRAM_ERR_DEC_PATH_LEN] =
+		"constructed file path did not have the expected length";
+	log[SSHRAM_ERR_DEC_PASUNEPIPE] =
+		"the pipe path points to a file that is not a pipe";
+	log[SSHRAM_ERR_DEC_MKFIFO] =
+		"couldn't create a new pipe";
+	log[SSHRAM_ERR_DEC_PIPE_FOPEN] =
+		"couldn't open the pipe";
+	log[SSHRAM_ERR_DEC_PIPE_FWRITE] =
+		"couldn't write to the pipe";
+	log[SSHRAM_ERR_DEC_PIPE_FCLOSE] =
+		"couldn't close the pipe";
+	log[SSHRAM_ERR_DEC_PIPE_UNLINK] =
+		"couldn't remove the pipe";
 }
 
 // sshram startup

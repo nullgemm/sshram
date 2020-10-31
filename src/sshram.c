@@ -31,7 +31,7 @@ void sshram_rng(uint8_t* out, size_t len)
 
 			if (c == EOF)
 			{
-				dgn_throw(SSHRAM_ERR_UNKNOWN);
+				dgn_throw(SSHRAM_ERR_RNG);
 				return;
 			}
 		}
@@ -71,11 +71,11 @@ void sshram_encode(struct config* config)
 
 	if (err_mlock != 0)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MLOCK);
 		return;
 	}
 
-	printf("Please enter a password (16-256 characters, not that of your SSH private key!): ");
+	printf("Please enter a password (16-256 bytes, not that of your SSH private key!): ");
 
 	err_pass = fgets(pass, 257, stdin);
 
@@ -84,7 +84,7 @@ void sshram_encode(struct config* config)
 		mem_clean(pass, 257);
 		munlock(pass, 257);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FGETS);
 		return;
 	}
 
@@ -93,7 +93,7 @@ void sshram_encode(struct config* config)
 		mem_clean(pass, 257);
 		munlock(pass, 257);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_ENC_PASS_LEN);
 		return;
 	}
 
@@ -107,7 +107,7 @@ void sshram_encode(struct config* config)
 		mem_clean(pass, 257);
 		munlock(pass, 257);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MLOCK);
 		return;
 	}
 
@@ -122,7 +122,7 @@ void sshram_encode(struct config* config)
 		munlock(pass, 257);
 		munlock(confirm, 257);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FGETS);
 		return;
 	}
 
@@ -133,7 +133,7 @@ void sshram_encode(struct config* config)
 		munlock(pass, 257);
 		munlock(confirm, 257);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_ENC_PASS_MATCH);
 		return;
 	}
 
@@ -155,7 +155,6 @@ void sshram_encode(struct config* config)
 		munlock(pass, 257);
 		munlock(confirm, 257);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
 		return;
 	}
 
@@ -171,7 +170,7 @@ void sshram_encode(struct config* config)
 		munlock(pass, 257);
 		munlock(confirm, 257);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MLOCK);
 		return;
 	}
 
@@ -197,7 +196,7 @@ void sshram_encode(struct config* config)
 		munlock(confirm, 257);
 		munlock(hash, 32);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_ARGON2);
 		return;
 	}
 
@@ -232,7 +231,6 @@ void sshram_encode(struct config* config)
 		mem_clean(hash, 32);
 		munlock(hash, 32);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
 		return;
 	}
 
@@ -248,7 +246,7 @@ void sshram_encode(struct config* config)
 		mem_clean(hash, 32);
 		munlock(hash, 32);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FSEEK);
 		return;
 	}
 
@@ -260,7 +258,7 @@ void sshram_encode(struct config* config)
 		mem_clean(hash, 32);
 		munlock(hash, 32);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FTELL);
 		return;
 	}
 
@@ -271,7 +269,7 @@ void sshram_encode(struct config* config)
 		mem_clean(hash, 32);
 		munlock(hash, 32);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MALLOC);
 		return;
 	}
 
@@ -284,7 +282,7 @@ void sshram_encode(struct config* config)
 
 		free(buf_decoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MALLOC);
 		return;
 	}
 
@@ -299,7 +297,7 @@ void sshram_encode(struct config* config)
 		free(buf_decoded);
 		free(buf_encoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MLOCK);
 		return;
 	}
 
@@ -314,7 +312,7 @@ void sshram_encode(struct config* config)
 		free(buf_decoded);
 		free(buf_encoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MLOCK);
 		return;
 	}
 
@@ -331,6 +329,7 @@ void sshram_encode(struct config* config)
 		free(buf_decoded);
 		free(buf_encoded);
 
+		dgn_throw(SSHRAM_ERR_FSEEK);
 		return;
 	}
 
@@ -347,7 +346,7 @@ void sshram_encode(struct config* config)
 		free(buf_decoded);
 		free(buf_encoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FREAD);
 		return;
 	}
 
@@ -370,7 +369,7 @@ void sshram_encode(struct config* config)
 
 	if (err_file != (buf_len + header_len))
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FWRITE);
 	}
 
 	// unlock remaining resources
@@ -394,7 +393,7 @@ void sshram_decode(struct config* config)
 
 	if (err_file != 0)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FSEEK);
 		return;
 	}
 
@@ -403,7 +402,7 @@ void sshram_decode(struct config* config)
 
 	if (buf_len < 0)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FTELL);
 		return;
 	}
 
@@ -412,7 +411,7 @@ void sshram_decode(struct config* config)
 
 	if (err_file != 0)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FSEEK);
 		return;
 	}
 
@@ -421,7 +420,7 @@ void sshram_decode(struct config* config)
 
 	if (err_file < 0)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FREAD);
 		return;
 	}
 
@@ -430,7 +429,7 @@ void sshram_decode(struct config* config)
 
 	if (err_file < 0)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FREAD);
 		return;
 	}
 
@@ -439,7 +438,7 @@ void sshram_decode(struct config* config)
 
 	if (err_file < 0)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FREAD);
 		return;
 	}
 
@@ -474,7 +473,7 @@ void sshram_decode(struct config* config)
 
 	if (err_mlock != 0)
 	{
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MLOCK);
 		return;
 	}
 
@@ -488,7 +487,7 @@ void sshram_decode(struct config* config)
 		mem_clean(pass, 257);
 		munlock(pass, 257);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FGETS);
 		return;
 	}
 
@@ -502,7 +501,7 @@ void sshram_decode(struct config* config)
 		mem_clean(pass, 257);
 		munlock(pass, 257);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MLOCK);
 		return;
 	}
 
@@ -526,7 +525,7 @@ void sshram_decode(struct config* config)
 		munlock(pass, 257);
 		munlock(hash, 32);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_ARGON2);
 		return;
 	}
 
@@ -551,7 +550,7 @@ void sshram_decode(struct config* config)
 		mem_clean(hash, 32);
 		munlock(hash, 32);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MALLOC);
 		return;
 	}
 
@@ -564,7 +563,7 @@ void sshram_decode(struct config* config)
 
 		free(buf_decoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MALLOC);
 		return;
 	}
 
@@ -579,7 +578,7 @@ void sshram_decode(struct config* config)
 		free(buf_decoded);
 		free(buf_encoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MLOCK);
 		return;
 	}
 
@@ -594,7 +593,7 @@ void sshram_decode(struct config* config)
 		free(buf_decoded);
 		free(buf_encoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MLOCK);
 		return;
 	}
 
@@ -612,7 +611,7 @@ void sshram_decode(struct config* config)
 		free(buf_decoded);
 		free(buf_encoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_FREAD);
 		return;
 	}
 
@@ -640,7 +639,7 @@ void sshram_decode(struct config* config)
 		munlock(buf_decoded, buf_len + 1);
 		free(buf_decoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_DEC_CHACHAPOLY);
 		return;
 	}
 
@@ -659,7 +658,7 @@ void sshram_decode(struct config* config)
 		munlock(buf_decoded, buf_len + 1);
 		free(buf_decoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_ENV);
 		return;
 	}
 
@@ -672,7 +671,7 @@ void sshram_decode(struct config* config)
 		munlock(buf_decoded, buf_len + 1);
 		free(buf_decoded);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_MALLOC);
 		return;
 	}
 
@@ -685,7 +684,7 @@ void sshram_decode(struct config* config)
 		free(buf_decoded);
 		free(path);
 
-		dgn_throw(SSHRAM_ERR_UNKNOWN);
+		dgn_throw(SSHRAM_ERR_DEC_PATH_LEN);
 		return;
 	}
 
@@ -705,7 +704,7 @@ void sshram_decode(struct config* config)
 			free(buf_decoded);
 			free(path);
 
-			dgn_throw(SSHRAM_ERR_UNKNOWN);
+			dgn_throw(SSHRAM_ERR_DEC_PASUNEPIPE);
 			return;
 		}
 	}
@@ -722,7 +721,7 @@ void sshram_decode(struct config* config)
 			free(buf_decoded);
 			free(path);
 
-			dgn_throw(SSHRAM_ERR_UNKNOWN);
+			dgn_throw(SSHRAM_ERR_DEC_MKFIFO);
 			return;
 		}
 	}
@@ -757,7 +756,7 @@ void sshram_decode(struct config* config)
 
 		if (pipe == NULL)
 		{
-			dgn_throw(SSHRAM_ERR_UNKNOWN);
+			dgn_throw(SSHRAM_ERR_DEC_PIPE_FOPEN);
 			break;
 		}
 
@@ -765,7 +764,7 @@ void sshram_decode(struct config* config)
 
 		if (err_write != ((size_t) buf_len))
 		{
-			dgn_throw(SSHRAM_ERR_UNKNOWN);
+			dgn_throw(SSHRAM_ERR_DEC_PIPE_FWRITE);
 			break;
 		}
 
@@ -773,7 +772,7 @@ void sshram_decode(struct config* config)
 
 		if (err_file == -1)
 		{
-			dgn_throw(SSHRAM_ERR_UNKNOWN);
+			dgn_throw(SSHRAM_ERR_DEC_PIPE_FCLOSE);
 			break;
 		}
 
@@ -787,7 +786,7 @@ void sshram_decode(struct config* config)
 
 		if (err_file == -1)
 		{
-			dgn_throw(SSHRAM_ERR_UNKNOWN);
+			dgn_throw(SSHRAM_ERR_DEC_PIPE_UNLINK);
 		}
 	}
 

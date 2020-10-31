@@ -177,7 +177,7 @@ void sshram_encode(struct config* config)
 	printf("Deriving password with Argon2...\n");
 
 	int err_hash = argon2i_hash_raw(
-		2,
+		100,
 		(1 << 16),
 		1,
 		pass,
@@ -508,7 +508,7 @@ void sshram_decode(struct config* config)
 	printf("Deriving password with Argon2...\n");
 
 	int err_hash = argon2i_hash_raw(
-		2,
+		100,
 		(1 << 16),
 		1,
 		pass,

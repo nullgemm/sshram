@@ -39,14 +39,36 @@ if the target computer SSHram is executed on is not considered trustworthy.
 SSH cannot be secured if the computer it runs on is not secure itself,
 and SSHram (or any other SSH helper program) is useless in this case.
 
-# Recommended key generation practices
+# Getting started
+## Recommended key generation practices
  - Generate your private key offline, in a clean ramdisk, on trusted hardware
    (You could use a trusted Linux installation image booted from another USB key).
  - Generate your key using trusted cryptography. Avoid algorithms designed
    with the help of some government or including shady constants.
  - Use multiple rounds of key derivation. It helps slowing attacks down without
    turning your data into an advertisement as much as overkill crypto stength does.
-
 ```
 ssh-keygen -t ed25519 -a 100
+```
+
+## Encoding a private key
+Once your SSH key pair is generated, your must encode the SSH private key.
+For this, run `sshram` with the `--encode` argument and follow the instructions:
+```
+sshram -e id_ed25519 id_ed25519.chachapoly
+```
+
+After the private key was encoded, overwrite the plain-text version and test:
+```
+mv id_ed25519.chachapoly id_ed25519
+sshram id_ed25519
+```
+
+You can now try to connect to a server using this keypair; it will require
+multiple key transmissions though, as described at SSHram's startup.
+
+## Arguments
+SSHram accepts other arguments than `--encode`, get the full list with `--help`:
+```
+sshram -h
 ```

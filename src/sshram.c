@@ -740,12 +740,16 @@ void sshram_decode(struct config* config)
 	{
 		do
 		{
-			printf("Send private key over the pipe ? [y/n]: ");
+			printf("Send private key over the pipe ? [Y/n]: ");
 			fflush(stdout);
 			fflush(stdin);
 			fgets(answer, 257, stdin);
 		}
-		while ((*answer != 'y') && (*answer != 'Y') && (*answer != 'n') && (*answer != 'N'));
+		while ((*answer != '\n')
+			&& (*answer != 'y')
+			&& (*answer != 'Y')
+			&& (*answer != 'n')
+			&& (*answer != 'N'));
 
 		if ((*answer == 'n') || (*answer == 'N'))
 		{

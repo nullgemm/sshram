@@ -20,34 +20,29 @@
 
 void sshram_rng(uint8_t* out, size_t len)
 {
-	size_t i = 0;
-	int c = EOF;
+	int fd = open("/dev/random", O_RDONLY);
 
-	while (i < len)
+	if (fd == -1)
 	{
-		// wait for user input
-		do
-		{
-			c = getchar();
-
-			if (c == EOF)
-			{
-				dgn_throw(SSHRAM_ERR_RNG);
-				return;
-			}
-		}
-		while (c != '\n');
-
-		// get microseconds mod 255
-		out[i] = chrono_stop(i) % 255;
-
-		printf("%02x (%02ld/%02ld bytes)", out[i], i + 1, len);
-		fflush(stdout);
-
-		++i;
+		dgn_throw(SSHRAM_ERR_RNG);
+		return;
 	}
 
-	printf("\n");
+	ssize_t ok = read(fd, out, len);
+
+	if (ok == -1)
+	{
+		dgn_throw(SSHRAM_ERR_RNG);
+		return;
+	}
+
+	ok = close(fd);
+
+	if (ok == -1)
+	{
+		dgn_throw(SSHRAM_ERR_RNG);
+		return;
+	}
 }
 
 char* getpassword(char* s, int size, FILE* stream)
@@ -184,11 +179,7 @@ void sshram_encode(struct config* config)
 	// generate salt
 	uint8_t salt[16];
 
-	printf(
-		"We must generate a random number for use in the hashing process.\n"
-		"For this, please press the Enter key 16 times at random intervals");
-
-	fflush(stdin);
+	printf("Generating the random salt (blocking while gathering entropy)\n");
 
 	sshram_rng(salt, 16);
 
@@ -262,11 +253,7 @@ void sshram_encode(struct config* config)
 	// generate nonce
 	uint8_t nonce[12];
 
-	printf(
-		"We must now generate a random number for use in the encoding process.\n"
-		"For this, please press the Enter key 12 times at random intervals");
-
-	fflush(stdin);
+	printf("Generating the random salt (blocking while gathering entropy)\n");
 
 	sshram_rng(nonce, 12);
 

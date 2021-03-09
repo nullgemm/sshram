@@ -15,6 +15,7 @@
 #include <sys/stat.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <termios.h>
 #include <unistd.h>
 
 void sshram_rng(uint8_t* out, size_t len)
@@ -49,6 +50,49 @@ void sshram_rng(uint8_t* out, size_t len)
 	printf("\n");
 }
 
+char* getpassword(char* s, int size, FILE* stream)
+{
+	struct termios ctx_a;
+	struct termios ctx_b;
+	char* err_pass;
+	int ok;
+
+	ok = tcgetattr(fileno(stream), &ctx_a);
+
+	if (ok != 0)
+	{
+		return NULL;
+	}
+
+	ctx_b = ctx_a;
+	ctx_b.c_lflag &= ~ECHO;
+
+	ok = tcsetattr(fileno(stream), TCSAFLUSH, &ctx_b);
+
+	if (ok != 0)
+	{
+		return NULL;
+	}
+
+	err_pass = fgets(s, size, stream);
+
+	if (err_pass == NULL)
+	{
+		return NULL;
+	}
+
+	ok = tcsetattr(fileno(stream), TCSAFLUSH, &ctx_a);
+
+	if (ok != 0)
+	{
+		return NULL;
+	}
+
+	printf("\n");
+
+	return err_pass;
+}
+
 void sshram_encode(struct config* config)
 {
 	// init timers
@@ -77,7 +121,7 @@ void sshram_encode(struct config* config)
 
 	printf("Please enter a password (16-256 bytes, not that of your SSH private key!): ");
 
-	err_pass = fgets(pass, 257, stdin);
+	err_pass = getpassword(pass, 257, stdin);
 
 	if (err_pass != pass)
 	{
@@ -113,7 +157,7 @@ void sshram_encode(struct config* config)
 
 	printf("Please confirm this password by typing it one more time: ");
 
-	err_pass = fgets(confirm, 257, stdin);
+	err_pass = getpassword(confirm, 257, stdin);
 
 	if (err_pass != confirm)
 	{
@@ -480,7 +524,7 @@ void sshram_decode(struct config* config)
 	printf("Please enter your password: ");
 	fflush(stdin);
 
-	char* err_pass = fgets(pass, 257, stdin);
+	char* err_pass = getpassword(pass, 257, stdin);
 
 	if (err_pass != pass)
 	{

@@ -253,7 +253,7 @@ void sshram_encode(struct config* config)
 	// generate nonce
 	uint8_t nonce[12];
 
-	printf("Generating the random salt (blocking while gathering entropy)\n");
+	printf("Generating the random nonce (blocking while gathering entropy)\n");
 
 	sshram_rng(nonce, 12);
 

@@ -8,15 +8,24 @@
 #include "sshram.h"
 
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/inotify.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
+
+static volatile bool decode_run = true;
+
+static void sigint_handler(int sig)
+{
+	decode_run = false;
+}
 
 void sshram_rng(uint8_t* out, size_t len)
 {
@@ -757,53 +766,105 @@ void sshram_decode(struct config* config)
 		}
 	}
 
-	size_t err_write;
-	char answer[257] = "n";
+	int inotify_fd = inotify_init();
 
-	printf(
-		"\n"
-		"Entering transmission loop. Here you will be able to send the key read by read.\n"
-		"The OpenSSH agent reads your SSH private key 4 times when first unlocking it,\n"
-		"so you will have to allow 3 reads at startup and 1 read after the password.\n"
-		"\n");
+	if (inotify_fd == -1)
+	{
+		mem_clean(buf_decoded, buf_len + 1);
+		munlock(buf_decoded, buf_len + 1);
+		free(buf_decoded);
+		free(path);
+
+		dgn_throw(SSHRAM_ERR_DEC_INOTIFY_INIT);
+		return;
+	}
+
+	int inotify_watch_fd = inotify_add_watch(inotify_fd, path, IN_ACCESS);
+
+	if (inotify_watch_fd == -1)
+	{
+		close(inotify_fd);
+		mem_clean(buf_decoded, buf_len + 1);
+		munlock(buf_decoded, buf_len + 1);
+		free(buf_decoded);
+		free(path);
+
+		dgn_throw(SSHRAM_ERR_DEC_INOTIFY_ADD_WATCH);
+		return;
+	}
+
+	// allocate a large enough inotify event buffer
+	size_t inotify_event_buf_size = (buf_len - 1) * (sizeof (struct inotify_event));
+	struct inotify_event* inotify_event_buf = malloc(inotify_event_buf_size);
+
+	if (inotify_event_buf == NULL)
+	{
+		inotify_rm_watch(inotify_fd, inotify_watch_fd);
+		close(inotify_fd);
+		mem_clean(buf_decoded, buf_len + 1);
+		munlock(buf_decoded, buf_len + 1);
+		free(buf_decoded);
+		free(path);
+
+		dgn_throw(SSHRAM_ERR_MALLOC);
+		return;
+	}
+
+	// set SIGINT handler
+	signal(SIGINT, sigint_handler);
+
+	// blocking, no-confirmation key transmission using inotify
+	int pipe;
+	ssize_t err_loop;
+	printf("Entering transmission loop\n");
 
 	do
 	{
-		do
-		{
-			printf("Send private key over the pipe ? [Y/n]: ");
-			fflush(stdout);
-			fflush(stdin);
-			fgets(answer, 257, stdin);
-		}
-		while ((*answer != '\n')
-			&& (*answer != 'y')
-			&& (*answer != 'Y')
-			&& (*answer != 'n')
-			&& (*answer != 'N'));
+		// we *must* open in read-write mode to get a non-blocking descriptor
+		// because unix pipes must be opened in read or read/write mode first
+		// or we will not be able to open without non-blocking
+		pipe = open(path, O_RDWR | O_NONBLOCK);
 
-		if ((*answer == 'n') || (*answer == 'N'))
-		{
-			break;
-		}
-
-		FILE* pipe = fopen(path, "w");
-
-		if (pipe == NULL)
+		if (pipe == -1)
 		{
 			dgn_throw(SSHRAM_ERR_DEC_PIPE_FOPEN);
 			break;
 		}
 
-		err_write = fwrite(buf_decoded, 1, buf_len, pipe);
+		// send the first character of the private key to be able to detect reads
+		err_loop = write(pipe, buf_decoded, 1);
 
-		if (err_write != ((size_t) buf_len))
+		if (err_loop != 1)
 		{
 			dgn_throw(SSHRAM_ERR_DEC_PIPE_FWRITE);
 			break;
 		}
 
-		err_file = fclose(pipe);
+		// wait for read
+		err_loop = read(inotify_fd, inotify_event_buf, sizeof (struct inotify_event));
+
+		if (err_loop == -1)
+		{
+			dgn_throw(SSHRAM_ERR_DEC_INOTIFY_READ);
+			break;
+		}
+
+		if (decode_run == false)
+		{
+			break;
+		}
+
+		// write the rest of the private key
+		err_loop = write(pipe, buf_decoded + 1, buf_len - 1);
+
+		if (err_loop != ((ssize_t) buf_len - 1))
+		{
+			dgn_throw(SSHRAM_ERR_DEC_PIPE_FWRITE);
+			break;
+		}
+
+		// close pipe to simulate end-of-file
+		err_file = close(pipe);
 
 		if (err_file == -1)
 		{
@@ -811,9 +872,19 @@ void sshram_decode(struct config* config)
 			break;
 		}
 
+		// wait for read
+		err_loop = read(inotify_fd, inotify_event_buf, inotify_event_buf_size);
+
+		if (err_loop == -1)
+		{
+			dgn_throw(SSHRAM_ERR_DEC_INOTIFY_READ);
+			break;
+		}
+
+		// success!
 		printf("Private key transmitted\n");
 	}
-	while ((*answer != 'n') && (*answer != 'N'));
+	while (decode_run == true);
 
 	if (config->keep_pipe == false)
 	{
@@ -826,8 +897,11 @@ void sshram_decode(struct config* config)
 	}
 
 	// cleanup
+	inotify_rm_watch(inotify_fd, inotify_watch_fd);
+	close(inotify_fd);
 	mem_clean(buf_decoded, buf_len + 1);
 	munlock(buf_decoded, buf_len + 1);
+	free(inotify_event_buf);
 	free(buf_decoded);
 	free(path);
 }

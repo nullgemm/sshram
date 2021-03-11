@@ -167,8 +167,6 @@ void log_init(char** log)
 		"password is not long enough (please use 16 bytes or more)";
 	log[SSHRAM_ERR_ENC_PASS_MATCH] =
 		"passwords did not match";
-	log[SSHRAM_ERR_ENC_PASS_MATCH] =
-		"passwords did not match";
 
 	log[SSHRAM_ERR_DEC_CHACHAPOLY] =
 		"couldn't decode file";
@@ -186,6 +184,12 @@ void log_init(char** log)
 		"couldn't close the pipe";
 	log[SSHRAM_ERR_DEC_PIPE_UNLINK] =
 		"couldn't remove the pipe";
+	log[SSHRAM_ERR_DEC_INOTIFY_INIT] =
+		"couldn't initialize inotify";
+	log[SSHRAM_ERR_DEC_INOTIFY_ADD_WATCH] =
+		"couldn't add an inotify watch";
+	log[SSHRAM_ERR_DEC_INOTIFY_READ] =
+		"couldn't read inotify events or received SIGINT";
 }
 
 // sshram startup

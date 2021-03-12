@@ -157,7 +157,7 @@ void log_init(char** log)
 	log[SSHRAM_ERR_FSEEK] =
 		"couldn't move file cursor";
 	log[SSHRAM_ERR_FTELL] =
-		"couldn't get file cursor position";
+		"couldn't get file cursor position or private key too short";
 	log[SSHRAM_ERR_FREAD] =
 		"couldn't read file";
 	log[SSHRAM_ERR_FWRITE] =

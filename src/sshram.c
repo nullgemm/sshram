@@ -293,7 +293,7 @@ void sshram_encode(struct config* config)
 	long buf_len = ftell(config->file_decoded);
 	long header_len = 16 + 12 + 16;
 
-	if (buf_len < 0)
+	if (buf_len < 2)
 	{
 		mem_clean(hash, 32);
 		munlock(hash, 32);
@@ -440,7 +440,7 @@ void sshram_decode(struct config* config)
 	long header_len = 16 + 12 + 16;
 	long buf_len = ftell(config->file_encoded) - header_len;
 
-	if (buf_len < 0)
+	if (buf_len < (header_len + 2))
 	{
 		dgn_throw(SSHRAM_ERR_FTELL);
 		return;

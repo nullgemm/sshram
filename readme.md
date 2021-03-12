@@ -72,3 +72,11 @@ SSHram accepts other arguments than `--encode`, get the full list with `--help`:
 ```
 sshram -h
 ```
+
+## SSH agent
+It is possible to use SSHram with an SSH agent without extra setup,
+thus completing private key management with passphrase management:
+```
+eval $(ssh-agent)
+ssh-add ~/.ssh/id_ed25519
+```

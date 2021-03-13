@@ -189,7 +189,11 @@ void log_init(char** log)
 	log[SSHRAM_ERR_DEC_INOTIFY_ADD_WATCH] =
 		"couldn't add an inotify watch";
 	log[SSHRAM_ERR_DEC_INOTIFY_READ] =
-		"couldn't read inotify events or received SIGINT";
+		"couldn't read inotify events";
+	log[SSHRAM_ERR_DEC_INOTIFY_READ_INT] =
+		"received SIGINT during inotify read";
+	log[SSHRAM_ERR_DEC_SIGACTION] =
+		"couldn't set SIGINT handler";
 }
 
 // sshram startup

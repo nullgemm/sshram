@@ -7,6 +7,7 @@
 #include "handy.h"
 #include "sshram.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
@@ -20,11 +21,11 @@
 #include <termios.h>
 #include <unistd.h>
 
-static volatile bool decode_run = true;
+static volatile sig_atomic_t decode_run = 1;
 
 static void sigint_handler(int sig)
 {
-	decode_run = false;
+	decode_run = 0;
 }
 
 void sshram_rng(uint8_t* out, size_t len)
@@ -426,10 +427,23 @@ void sshram_encode(struct config* config)
 
 void sshram_decode(struct config* config)
 {
-	int err_file;
+	// set SIGINT handler
+	const struct sigaction sig_struct =
+	{
+		.sa_handler = sigint_handler,
+		.sa_flags = 0, // interrupt read
+	};
+
+	int err_sig = sigaction(SIGINT, &sig_struct, NULL);
+
+	if (err_sig == -1)
+	{
+		dgn_throw(SSHRAM_ERR_DEC_SIGACTION);
+		return;
+	}
 
 	// get SSH private key length
-	err_file = fseek(config->file_encoded, 0, SEEK_END);
+	int err_file = fseek(config->file_encoded, 0, SEEK_END);
 
 	if (err_file != 0)
 	{
@@ -799,26 +813,21 @@ void sshram_decode(struct config* config)
 
 	if (inotify_event_buf == NULL)
 	{
-		inotify_rm_watch(inotify_fd, inotify_watch_fd);
-		close(inotify_fd);
-		mem_clean(buf_decoded, buf_len + 1);
-		munlock(buf_decoded, buf_len + 1);
-		free(buf_decoded);
-		free(path);
-
+		decode_run = 0;
 		dgn_throw(SSHRAM_ERR_MALLOC);
 		return;
 	}
 
-	// set SIGINT handler
-	signal(SIGINT, sigint_handler);
-
 	// blocking, no-confirmation key transmission using inotify
 	int pipe;
 	ssize_t err_loop;
-	printf("Entering transmission loop\n");
 
-	do
+	if (decode_run == 1)
+	{
+		printf("Entering transmission loop\n");
+	}
+
+	while (decode_run == 1)
 	{
 		// we *must* open in read-write mode to get a non-blocking descriptor
 		// because unix pipes must be opened in read or read/write mode first
@@ -845,11 +854,19 @@ void sshram_decode(struct config* config)
 
 		if (err_loop == -1)
 		{
-			dgn_throw(SSHRAM_ERR_DEC_INOTIFY_READ);
+			if (errno == EINTR)
+			{
+				dgn_throw(SSHRAM_ERR_DEC_INOTIFY_READ_INT);
+			}
+			else
+			{
+				dgn_throw(SSHRAM_ERR_DEC_INOTIFY_READ);
+			}
+
 			break;
 		}
 
-		if (decode_run == false)
+		if (decode_run == 0)
 		{
 			break;
 		}
@@ -877,14 +894,21 @@ void sshram_decode(struct config* config)
 
 		if (err_loop == -1)
 		{
-			dgn_throw(SSHRAM_ERR_DEC_INOTIFY_READ);
+			if (errno == EINTR)
+			{
+				dgn_throw(SSHRAM_ERR_DEC_INOTIFY_READ_INT);
+			}
+			else
+			{
+				dgn_throw(SSHRAM_ERR_DEC_INOTIFY_READ);
+			}
+
 			break;
 		}
 
 		// success!
 		printf("Private key transmitted\n");
 	}
-	while (decode_run == true);
 
 	if (config->keep_pipe == false)
 	{
@@ -904,4 +928,6 @@ void sshram_decode(struct config* config)
 	free(inotify_event_buf);
 	free(buf_decoded);
 	free(path);
+
+	printf("Exiting normally\n");
 }

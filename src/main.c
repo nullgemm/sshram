@@ -5,6 +5,7 @@
 #include "sshram.h"
 
 #include <libgen.h>
+#include <termios.h>
 
 #define ARG_COUNT 11
 
@@ -162,6 +163,8 @@ void log_init(char** log)
 		"couldn't read file";
 	log[SSHRAM_ERR_FWRITE] =
 		"couldn't write file";
+	log[SSHRAM_ERR_TERMIOS] =
+		"termios error";
 
 	log[SSHRAM_ERR_ENC_PASS_LEN] =
 		"password is not long enough (please use 16 bytes or more)";
@@ -259,7 +262,24 @@ int main(int argc, char** argv)
 		}
 		case SSHRAM_ACTION_DECODE:
 		{
+			// avoid printing '^C' on SIGINT if possible
+			struct termios ctx_a;
+			struct termios ctx_b;
+			int err_termios = tcgetattr(fileno(stdin), &ctx_a);
+
+			if (err_termios != 0)
+			{
+				dgn_throw(SSHRAM_ERR_TERMIOS);
+				break;
+			}
+
+			ctx_b = ctx_a;
+			ctx_b.c_lflag &= ~ECHO;
+			tcsetattr(fileno(stdout), TCSAFLUSH, &ctx_b);
+
 			sshram_decode(&config);
+
+			tcsetattr(fileno(stdout), TCSAFLUSH, &ctx_a);
 			fclose(config.file_encoded);
 			break;
 		}

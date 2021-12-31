@@ -427,18 +427,6 @@ void sshram_encode(struct config* config)
 
 void sshram_decode(struct config* config)
 {
-	// avoid printing '^C' on SIGINT if possible
-	struct termios ctx_a;
-	struct termios ctx_b;
-	int err_termios = tcgetattr(fileno(stdin), &ctx_a);
-
-	if (err_termios == 0)
-	{
-		ctx_b = ctx_a;
-		ctx_b.c_lflag &= ~ECHO;
-		tcsetattr(fileno(stdout), TCSAFLUSH, &ctx_b);
-	}
-
 	// set SIGINT handler
 	const struct sigaction sig_struct =
 	{
